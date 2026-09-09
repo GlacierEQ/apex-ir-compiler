@@ -41,6 +41,10 @@ def verify_dsl(tokens: List[Dict[str, Any]]) -> None:
     action_count = 0
     terminated = False
     for t in tokens:
+        if terminated:
+            if t["type"] in ("Commit", "Abort"):
+                raise ValueError("Multiple COMMIT/ABORT")
+            raise ValueError("Token after COMMIT/ABORT")
         if t["type"] == "Changeset":
             has_changeset = True
         elif t["type"] == "Action":
@@ -51,6 +55,8 @@ def verify_dsl(tokens: List[Dict[str, Any]]) -> None:
             if not has_changeset:
                 raise ValueError("Termination before CHANGESET")
             terminated = True
+            if t["type"] == "Abort" and action_count == 0:
+                raise ValueError("ABORT with no ACTION is a no-op changeset")
     if not terminated:
         raise ValueError("Missing COMMIT or ABORT")
     if action_count == 0:
